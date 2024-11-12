@@ -41,7 +41,7 @@ def controller_connect_yangrpc(address, ncport, user, password, pub_key, priv_ke
 	conns={}
 	return network,conns
 
-def network_connect(network, skip_unreachable=False):
+def network_connect(network, skip_unreachable=False, timeout=100):
 
 	conns={}
 	network_id = network.xpath('nd:network-id', namespaces=namespaces)
@@ -58,7 +58,7 @@ def network_connect(network, skip_unreachable=False):
 		ncport = node.xpath('netconf-node:netconf-connect-params/netconf-node:ncport', namespaces=namespaces)[0].text
 
 		print("Connect to " + node_id +" (server=%(server)s user=%(user)s) password=%(password)s ncport=%(ncport)s:" % {'server':server, 'user':user, 'password':password, 'ncport':ncport})
-		conns[node_id] = netconf_session_litenc(host=server,port=int(ncport),username=user,password=password,timeout=100)
+		conns[node_id] = netconf_session_litenc(host=server,port=int(ncport),username=user,password=password,timeout=timeout)
 
 		if conns[node_id] == None:
 			print("FAILED connect")
@@ -299,6 +299,8 @@ def network_commit(conns):
 	data_str={}
 	for conn_id in conns:
 		result = conns[conn_id].rpc(rpc)
+		print(conn_id)
+		print(lxml.etree.tostring(result))
 		data = result.xpath("./nc:data", namespaces=namespaces)[0]
 		new_data = lxml.etree.fromstring(lxml.etree.tostring(data))
 		#file_name=st + "-config" + "-" + conn_id + ".xml"

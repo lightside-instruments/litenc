@@ -11,7 +11,7 @@ class tntapi_netconf_session_litenc_class:
 	def __init__(self):
 		return
 
-	def connect(self, host="localhost",port=830,username="root",password=None,timeout=100):
+	def connect(self, host="localhost",port=830,username="root",password=None,timeout=1000):
 		conn = litenc()
 		if(password==None):
 			password_str=""
@@ -47,7 +47,7 @@ class tntapi_netconf_session_litenc_class:
 		self.reply=self.litenc_session.send("""<rpc xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" message-id="1">"""+xml_str+"""</rpc>""")
 
 	def receive(self):
-		(ret, reply_xml_str)=self.litenc_session.receive()
+		(ret,reply_xml_str)=self.litenc_session.receive()
 		assert(ret==0)
 		print(reply_xml_str)
 		myetree = etree.fromstring(reply_xml_str.encode('utf-8'))
@@ -61,7 +61,7 @@ class tntapi_netconf_session_litenc_class:
 	def close(self):
 		self.litenc_session.close()
 
-def netconf_session_litenc(host="localhost",port=830,username="root",password="blah",timeout=100):
+def netconf_session_litenc(host="localhost",port=830,username="root",password="blah",timeout=1000):
 	x=tntapi_netconf_session_litenc_class()
 	res=x.connect(host,port,username,password,timeout)
 	if(res==0):
