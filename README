@@ -16,10 +16,10 @@ scripts/netconf_get - script connecting to netconf server sending <get> RPC and 
 
 Installation:
 
- sudo apt-get -y install python python-lxml libxml2-utils python-paramiko
- sudo python setup.py install
+ sudo apt-get -y install python3 python3-lxml libxml2-utils python3-paramiko
+ sudo python3 setup.py install
  cd tntapi
- sudo python setup.py install
+ sudo python3 setup.py install
 
 # In case you use yangrpc with yangcli syntax (recommended) you have to install yuma123 with client side python support yangrpc/yangcli
  cd ~
@@ -31,11 +31,11 @@ Installation:
  make
  make install
  cd netconf/python
- apt-get -y install python-all-dev
+ apt-get -y install python3-all-dev
  autoreconf -i -f
  ./configure CFLAGS="-g -O0"  CXXFLAGS="-g -O0" --prefix=/usr
  make
  make install
- python setup.py install 
+ python3 setup.py install
 
 Done.
