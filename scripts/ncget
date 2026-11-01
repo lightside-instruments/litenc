@@ -1,11 +1,28 @@
 #!/usr/bin/python
 import sys, os
-import litenc
+from litenc.litenc import litenc
 import time
 import argparse
 
 def eprint(*args):
 	sys.stderr.write(' '.join(map(str,args)) + '\n')
+
+def enable_verbose_session(conn):
+	send = conn.send
+	receive = conn.receive
+
+	def verbose_send(xml):
+		eprint("[SEND]", xml)
+		return send(xml)
+
+	def verbose_receive():
+		status, xml = receive()
+		if xml:
+			eprint("[RECEIVE]", xml)
+		return status, xml
+
+	conn.send = verbose_send
+	conn.receive = verbose_receive
 
 def main():
 	parser = argparse.ArgumentParser()
@@ -17,9 +34,13 @@ def main():
 	parser.add_argument("--public-key", help="NETCONF public  key file path - default=os.getenv(\"HOME\")/.ssh/id_rsa.pub")
 	parser.add_argument("--xpath", help="Xpath specifying instance id e.g. /interfaces-state/interface[name='eth0']/statistics/out-octets")
 
+	parser.add_argument("--verbose-session", action="store_true", help="Print all sent and received NETCONF messages to stderr")
+
 	args = parser.parse_args()
 
-	conn = litenc.litenc()
+	conn = litenc()
+	if args.verbose_session:
+		enable_verbose_session(conn)
 	if(args.server==None):
 		server="localhost"
 	else:
@@ -85,7 +106,7 @@ def main():
 		eprint("[FAILED] Receiving <get> reply")
 	else:
 		print(reply_str)
-	conn.terminate()
+	conn.close()
 	return 0
 
 exit(main())

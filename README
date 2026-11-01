@@ -1,41 +1,42 @@
-litenc - light NETCONF session framer API allowing the user full control without going through any XML validation of the PDUs. litenc can be easily extended with wrappers doing more based on the simple core functionality see litenc_lxml.
+# litenc
 
+A lightweight NETCONF session framer for Python. The API provides `connect`,
+`send`, `receive`, `close`, and a convenience `rpc` operation. It gives callers
+control over NETCONF messages without validating the protocol data units.
 
-The entire litenc API is composed of 4+1 functions:
-* connect
-* send
-* receive
-* close
+## Installation
 
-** rpc - is a sequence of send and receive calls. Handy when you do not need the full control provided by send and receive.
+```sh
+python -m pip install litenc
+```
 
+Requires Python 3.7 or newer. Paramiko and lxml are installed automatically.
+The distribution includes the `litenc` and `litenc_lxml` Python packages and
+the `ncget` command.
 
-For short example check:
+## Usage
 
-scripts/netconf_get - script connecting to netconf server sending <get> RPC and printing to the standard output the reply XML.
+```python
+from litenc.litenc import litenc
 
-Installation:
+session = litenc()
+if session.connect(server="router.example.com", user="admin", password="secret") == 0:
+    try:
+        session.send('<hello xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">'
+                     '<capabilities><capability>urn:ietf:params:netconf:base:1.0</capability>'
+                     '</capabilities></hello>')
+        status, hello = session.receive()
+    finally:
+        session.close()
+```
 
- sudo apt-get -y install python3 python3-lxml libxml2-utils python3-paramiko python3-setuptools
- sudo python3 setup.py install
- cd tntapi
- sudo python3 setup.py install
+Use `ncget --verbose-session` to log all sent and received NETCONF messages
+to stderr while keeping the result on stdout. For command options, run
+`ncget --help`. Network-wide tools are available in
+the separate `tntapi` distribution.
 
-# In case you use yangrpc with yangcli syntax (recommended) you have to install yuma123 with client side python support yangrpc/yangcli
- cd ~
- git clone https://github.com/vlvassilev/yuma123.git
- cd yuma123
- apt-get -y install libxml2-dev libssh2-1-dev libncurses5-dev zlib1g-dev libreadline-dev libssl-dev
- autoreconf -i -f
- ./configure CFLAGS="-g -O0"  CXXFLAGS="-g -O0" --prefix=/usr
- make
- make install
- cd netconf/python
- apt-get -y install python3-all-dev
- autoreconf -i -f
- ./configure CFLAGS="-g -O0"  CXXFLAGS="-g -O0" --prefix=/usr
- make
- make install
- python3 setup.py install
+[Source and issue tracker](https://github.com/vlvassilev/litenc)
 
-Done.
+## License
+
+BSD-3-Clause. See LICENSE and COPYRIGHT for the license and copyright notices.

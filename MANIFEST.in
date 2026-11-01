@@ -1,0 +1,4 @@
+include README.pypi.md LICENSE COPYRIGHT CHANGELOG
+include RELEASE.md requirements-release.txt
+include scripts/ncget
+global-exclude *.py[cod] __pycache__ *~

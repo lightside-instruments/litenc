@@ -1,3 +1,7 @@
+litenc (1.9) UNRELEASED; urgency=medium
+
+  * Split litenc into an independent repository.
+
 litenc (1.8) trixie; urgency=medium
 
   * Replaced ascii with utf-8 as default encoding
