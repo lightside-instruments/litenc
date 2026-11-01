@@ -1,6 +1,8 @@
-litenc (1.9) UNRELEASED; urgency=medium
+litenc (1.9) trixie; urgency=medium
 
-  * Split litenc into an independent repository.
+  * Split litenc into an independent repository from tntapi.
+
+ -- Vladimir Vassilev <vladimir@lightside-instruments.com>  Sun, 01 Nov 2026 23:49:01 +0100
 
 litenc (1.8) trixie; urgency=medium
 

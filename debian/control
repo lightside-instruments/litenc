@@ -3,13 +3,16 @@ Section: python
 Priority: optional
 Maintainer: Vladimir Vassilev <vladimir@lightside-instruments.com>
 Build-Depends: debhelper-compat (= 13),
-               dh-python,
+               dh-sequence-python3,
+               pybuild-plugin-pyproject,
                python3-all,
-               python3-paramiko,
-               python3-lxml,
-               python3-setuptools
-Standards-Version: 4.6.1
-Homepage: https://github.com/lightside-instruments/litenc/
+               python3-setuptools (>= 77.0.3),
+               python3-wheel
+Standards-Version: 4.7.2
+Rules-Requires-Root: no
+Homepage: https://github.com/lightside-instruments/litenc
+Vcs-Git: https://github.com/lightside-instruments/litenc.git
+Vcs-Browser: https://github.com/lightside-instruments/litenc
 
 Package: python3-litenc
 Architecture: all
@@ -17,13 +20,6 @@ Depends: ${misc:Depends},
          ${python3:Depends},
          python3-paramiko,
          python3-lxml
-Description: Python library for NETCONF clients
- litenc is a Python library that facilitates client-side scripting
- and application development around the NETCONF protocol.
- .
- NETCONF (Network Configuration Protocol) provides mechanisms to install,
- manipulate, and delete the configuration of network devices. Its operations
- are realized on top of a simple remote procedure call (RPC) layer.
- .
- The NETCONF protocol uses an Extensible Markup Language (XML) based data
- encoding for the configuration data as well as the protocol messages.
+Description: lightweight NETCONF client library and command-line tool
+ litenc provides NETCONF message framing and SSH sessions with control over
+ protocol messages. It includes an lxml wrapper and the ncget command.

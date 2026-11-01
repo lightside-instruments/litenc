@@ -28,3 +28,21 @@ python -m pip check
 ```
 
 Publish litenc 1.9 before tntapi 1.9, which depends on it.
+
+## Debian packages
+
+The upstream package version is 1.9 and the Debian package version is 1.9-1.
+Install the build tools on a Debian 13 host:
+
+```sh
+sudo apt install debhelper dh-sequence-python3 pybuild-plugin-pyproject python3-all python3-setuptools python3-wheel
+dpkg-buildpackage -us -uc -b
+lintian ../litenc_1.9-1_*.changes
+```
+
+The build creates `../python3-litenc_1.9-1_all.deb`. Build both projects,
+then install their packages together:
+
+```sh
+sudo apt install ./python3-litenc_1.9-1_all.deb ./python3-tntapi_1.9-1_all.deb
+```

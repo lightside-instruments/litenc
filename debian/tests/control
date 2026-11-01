@@ -1,0 +1,3 @@
+Test-Command: python3 -c "from litenc.litenc import litenc; import litenc_lxml"
+Depends: @, python3
+Restrictions: superficial

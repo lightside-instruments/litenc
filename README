@@ -35,7 +35,7 @@ to stderr while keeping the result on stdout. For command options, run
 `ncget --help`. Network-wide tools are available in
 the separate `tntapi` distribution.
 
-[Source and issue tracker](https://github.com/vlvassilev/litenc)
+[Source and issue tracker](https://github.com/lightside-instruments/litenc)
 
 ## License
 

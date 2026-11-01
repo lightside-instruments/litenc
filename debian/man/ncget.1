@@ -1,0 +1,40 @@
+.TH NCGET 1 "November 2026" "litenc 1.9" "User Commands"
+.SH NAME
+ncget \- read operational data from a NETCONF device
+.SH SYNOPSIS
+.B ncget
+.RI [ options ]
+.SH DESCRIPTION
+Establish an SSH NETCONF session, exchange capabilities, send a get request,
+and print the reply to standard output. Session status is written to standard
+error.
+.SH OPTIONS
+.TP
+.BI \-\-server " address"
+Server address. The default is localhost.
+.TP
+.BI \-\-port " port"
+Server port. The default is 830.
+.TP
+.BI \-\-user " username"
+Login user. The default is the USER environment variable.
+.TP
+.BI \-\-password " password"
+Use password authentication. When omitted, use an SSH private key.
+.TP
+.BI \-\-private\-key " file"
+Private key file. The default is $HOME/.ssh/id_rsa.
+.TP
+.BI \-\-public\-key " file"
+Public key file. The default is $HOME/.ssh/id_rsa.pub.
+.TP
+.BI \-\-xpath " expression"
+Select operational data with an XPath filter.
+.TP
+.B \-\-verbose\-session
+Print all sent and received NETCONF messages to standard error.
+.TP
+.BR \-h ", " \-\-help
+Show available options.
+.SH SEE ALSO
+.BR get-net (1)
