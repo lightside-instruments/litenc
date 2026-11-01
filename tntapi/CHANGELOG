@@ -1,3 +1,8 @@
+tntapi (1.8) trixie; urgency=medium
+
+  * Added timeout param to tntapi connect() and made default value 1000 instead of 100 msec
+  * Added optional access timing stats
+
 tntapi (1.7) stable; urgency=medium
 
   * Transition to python3
@@ -5,7 +10,7 @@ tntapi (1.7) stable; urgency=medium
 
  -- Vladimir Vassilev <vladimir@lightside-instruments.com>  Wed, 07 Dec 2022 16:08:08 +0100
 
-python-tntapi (1.6) UNRELEASED; urgency=medium
+python-tntapi (1.6) stable; urgency=medium
 
   * Added flow visualization to traffic-graphic
   * Added tntapi.yangcli function and usage example

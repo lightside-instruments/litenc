@@ -18,7 +18,8 @@ state_transaction_counter = 0
 namespaces={"nc":"urn:ietf:params:xml:ns:netconf:base:1.0",
 	"nd":"urn:ietf:params:xml:ns:yang:ietf-network",
 	"nt":"urn:ietf:params:xml:ns:yang:ietf-network-topology",
-	"netconf-node":"urn:tntapi:netconf-node"}
+	"netconf-node":"urn:tntapi:netconf-node",
+	"node-access-statistics":"urn:tntapi:node-access-statistics"}
 
 yangcli_supported=False
 try:
@@ -41,7 +42,22 @@ def controller_connect_yangrpc(address, ncport, user, password, pub_key, priv_ke
 	conns={}
 	return network,conns
 
-def network_connect(network, skip_unreachable=False, timeout=100):
+def _set_operation_duration(node, leaf, duration):
+	if node is None:
+		return
+	for previous in node.xpath("node-access-statistics:" + leaf, namespaces=namespaces):
+		node.remove(previous)
+	value = lxml.etree.SubElement(node, "{urn:tntapi:node-access-statistics}" + leaf,
+		nsmap={"node-access-statistics": namespaces["node-access-statistics"]})
+	value.text = str(duration)
+
+def _access_statistics_nodes(network):
+	return {} if network is None else {
+		node.xpath("nd:node-id", namespaces=namespaces)[0].text: node
+		for node in network.xpath("nd:node", namespaces=namespaces)}
+
+def network_connect(network, skip_unreachable=False, timeout=100, access_statistics_results_network=None):
+	statistics_nodes = _access_statistics_nodes(access_statistics_results_network)
 
 	conns={}
 	network_id = network.xpath('nd:network-id', namespaces=namespaces)
@@ -58,7 +74,10 @@ def network_connect(network, skip_unreachable=False, timeout=100):
 		ncport = node.xpath('netconf-node:netconf-connect-params/netconf-node:ncport', namespaces=namespaces)[0].text
 
 		print("Connect to " + node_id +" (server=%(server)s user=%(user)s) password=%(password)s ncport=%(ncport)s:" % {'server':server, 'user':user, 'password':password, 'ncport':ncport})
+		connect_started = time.monotonic_ns()
 		conns[node_id] = netconf_session_litenc(host=server,port=int(ncport),username=user,password=password,timeout=timeout)
+
+		_set_operation_duration(statistics_nodes.get(node_id), "connect-duration", time.monotonic_ns() - connect_started)
 
 		if conns[node_id] == None:
 			print("FAILED connect")
@@ -70,11 +89,12 @@ def network_connect(network, skip_unreachable=False, timeout=100):
 			print("OK")
 	return conns
 
-def network_connect_yangrpc(network):
+def network_connect_yangrpc(network, access_statistics_results_network=None):
+	statistics_nodes = _access_statistics_nodes(access_statistics_results_network)
 
 	yconns={}
 	if(yangcli_supported!=True):
-		return network_connect(network)
+		return network_connect(network, access_statistics_results_network=access_statistics_results_network)
 	network_id = network.xpath('nd:network-id', namespaces=namespaces)
 	print("Connecting to YANG network: " + network_id[0].text)
 	nodes = network.xpath('nd:node', namespaces=namespaces)
@@ -89,7 +109,10 @@ def network_connect_yangrpc(network):
 		ncport = node.xpath('netconf-node:netconf-connect-params/netconf-node:ncport', namespaces=namespaces)[0].text
 
 		print("Connect to YANG device " + node_id +" (server=%(server)s user=%(user)s) password=%(password)s ncport=%(ncport)s:" % {'server':server, 'user':user, 'password':password, 'ncport':ncport})
+		connect_started = time.monotonic_ns()
 		yconns[node_id] = yangrpc.connect(server, int(ncport), user, password, os.getenv('HOME')+"/.ssh/id_rsa.pub", os.getenv('HOME')+"/.ssh/id_rsa", "--dump-session=nc-session-%s-" % (node_id))
+
+		_set_operation_duration(statistics_nodes.get(node_id), "connect-duration", time.monotonic_ns() - connect_started)
 
 		if yconns[node_id] == None:
 			print("FAILED connect")
@@ -98,7 +121,8 @@ def network_connect_yangrpc(network):
 			print("OK")
 	return yconns
 
-def network_get_state(network, conns, filter=""):
+def network_get_state(network, conns, filter="", access_statistics_results_network=None):
+	statistics_nodes = _access_statistics_nodes(access_statistics_results_network)
 	global config_transaction_counter
 	global state_transaction_counter
 
@@ -111,8 +135,14 @@ def network_get_state(network, conns, filter=""):
 	assert(len(nodes)>0)
 	file_name_prefix=str(config_transaction_counter) + "-state-" + str(state_transaction_counter)
 	print(file_name_prefix)
+	read_started = {}
 	for node in nodes:
 		node_id=node.xpath("nd:node-id", namespaces=namespaces)[0].text
+		if access_statistics_results_network is not None:
+			for target in (node, statistics_nodes.get(node_id)):
+				if target is not None:
+					for duration in target.xpath("node-access-statistics:read-duration", namespaces=namespaces):
+						target.remove(duration)
 
 		if(conns[node_id]==None):
 			print("Skipping over disconnected " + node_id)
@@ -126,6 +156,7 @@ def network_get_state(network, conns, filter=""):
 		else:
 			my_filter=filter
 		rpc="""<get xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">%(filter)s</get>"""%{'filter':my_filter}
+		read_started[node_id] = time.monotonic_ns()
 		conns[node_id].send(rpc)
 
 	for node in nodes:
@@ -140,6 +171,10 @@ def network_get_state(network, conns, filter=""):
 			continue
 
 		result = conns[node_id].receive()
+		read_duration = time.monotonic_ns() - read_started[node_id]
+		if access_statistics_results_network is not None:
+			_set_operation_duration(node, "read-duration", read_duration)
+			_set_operation_duration(statistics_nodes.get(node_id), "read-duration", read_duration)
 		data = result.xpath("nc:data", namespaces=namespaces)[0]
 		new_data = lxml.etree.fromstring(lxml.etree.tostring(data))
 
@@ -159,7 +194,8 @@ def network_get_state(network, conns, filter=""):
 
 	return new_network
 
-def network_get_config(network, conns, filter=""):
+def network_get_config(network, conns, filter="", access_statistics_results_network=None):
+	statistics_nodes = _access_statistics_nodes(access_statistics_results_network)
 	global config_transaction_counter
 	global state_transaction_counter
 
@@ -173,8 +209,14 @@ def network_get_config(network, conns, filter=""):
 	assert(len(nodes)>0)
 	file_name_prefix=str(config_transaction_counter) + "-config-" + str(state_transaction_counter)
 	print(file_name_prefix)
+	read_started = {}
 	for node in nodes:
 		node_id=node.xpath("nd:node-id", namespaces=namespaces)[0].text
+		if access_statistics_results_network is not None:
+			for target in (node, statistics_nodes.get(node_id)):
+				if target is not None:
+					for duration in target.xpath("node-access-statistics:read-duration", namespaces=namespaces):
+						target.remove(duration)
 		if(conns[node_id] == None):
 			continue
 		configs=node.xpath("netconf-node:config", namespaces=namespaces)
@@ -182,6 +224,7 @@ def network_get_config(network, conns, filter=""):
 		if(len(configs)==1):
 			config=configs[0]
 			config.getparent().remove(config)
+		read_started[node_id] = time.monotonic_ns()
 		conns[node_id].send(rpc)
 
 	for node in nodes:
@@ -190,6 +233,10 @@ def network_get_config(network, conns, filter=""):
 			continue
 
 		result = conns[node_id].receive()
+		read_duration = time.monotonic_ns() - read_started[node_id]
+		if access_statistics_results_network is not None:
+			_set_operation_duration(node, "read-duration", read_duration)
+			_set_operation_duration(statistics_nodes.get(node_id), "read-duration", read_duration)
 		print(result.tag)
 		print(lxml.etree.tostring(result))
 		data = result.xpath("nc:data", namespaces=namespaces)[0]
@@ -239,7 +286,7 @@ def yangcli_ok_script(yconn, yangcli_script):
 			print(lxml.etree.tostring(result))
 			assert(0)
 
-def copy_config(conn, config):
+def copy_config(conn, config, access_statistics_results_node=None):
 	rpc ="""
 <copy-config xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
  <target>
@@ -250,7 +297,9 @@ def copy_config(conn, config):
  </source>
 </copy-config>
 """ % {'config':config.decode('utf-8')}
+	write_started = time.monotonic_ns()
 	result=conn.rpc(rpc)
+	_set_operation_duration(access_statistics_results_node, "write-duration", time.monotonic_ns() - write_started)
 	ok=result.xpath('nc:ok', namespaces=namespaces)
 	if(len(ok)!=1):
 		print(rpc)
@@ -258,7 +307,7 @@ def copy_config(conn, config):
 		assert(0)
 	return
 
-def edit_config(conn, config):
+def edit_config(conn, config, access_statistics_results_node=None):
 	rpc ="""
 <edit-config xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
  <default-operation>merge</default-operation>
@@ -268,7 +317,9 @@ def edit_config(conn, config):
   %(config)s
 </edit-config>
 """ % {'config':config}
+	write_started = time.monotonic_ns()
 	result=conn.rpc(rpc)
+	_set_operation_duration(access_statistics_results_node, "write-duration", time.monotonic_ns() - write_started)
 	ok=result.xpath('nc:ok', namespaces=namespaces)
 	if(len(ok)!=1):
 		print(rpc)
@@ -278,7 +329,7 @@ def edit_config(conn, config):
 	print(lxml.etree.tostring(result))
 	return
 
-def network_commit(conns):
+def network_commit(conns, access_statistics_results_network=None):
 	global config_transaction_counter
 	global config_transaction_timestamp_started
 	global config_transaction_timestamp_completed
@@ -317,11 +368,18 @@ def network_commit(conns):
 	timestamp_started = datetime.datetime.fromtimestamp(config_transaction_timestamp_started).strftime('%Y-%m-%dT%H:%M:%S')
 	print("Transaction " + str(config_transaction_counter) + " started: " + timestamp_started)
 
+	commit_started = {}
+	nodes = {} if access_statistics_results_network is None else {
+		node.xpath("nd:node-id", namespaces=namespaces)[0].text: node
+		for node in access_statistics_results_network.xpath("nd:node", namespaces=namespaces)}
 	rpc="""<commit/>"""
 	for conn_id in conns:
+		commit_started[conn_id] = time.monotonic_ns()
 		conns[conn_id].send(rpc)
 	for conn_id in conns:
 		result = conns[conn_id].receive()
+		_set_operation_duration(nodes.get(conn_id), "commit-duration",
+			time.monotonic_ns() - commit_started[conn_id])
 		ok=result.xpath('nc:ok', namespaces=namespaces)
 		if(len(ok)!=1):
 			print(data_str[conn_id])

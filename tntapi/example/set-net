@@ -1,10 +1,12 @@
 #!/usr/bin/python
 
+# Usage: set-net input-xml-file [output-xml-file]
+# Optionally saves the updated topology with access statistics after commit.
+
 import lxml
 from lxml import etree
 import time
 import sys, os
-import argparse
 from copy import deepcopy
 import tntapi
 
@@ -19,7 +21,7 @@ def main():
 	orig_tree=tree
 
 	network = tree.xpath('/nc:config/nd:networks/nd:network', namespaces=namespaces)[0]
-	conns = tntapi.network_connect(network)
+	conns = tntapi.network_connect(network, access_statistics_results_network=network)
 
 	assert(conns != None)
 
@@ -34,10 +36,12 @@ def main():
 		for child in config:
 			netconf_config.append( deepcopy(child) )
 
-		tntapi.copy_config(conns[conn_id],lxml.etree.tostring(netconf_config))
+		tntapi.copy_config(conns[conn_id],lxml.etree.tostring(netconf_config), access_statistics_results_node=config.getparent())
 
 
-	tntapi.network_commit(conns)
+	tntapi.network_commit(conns, access_statistics_results_network=network)
+	if len(sys.argv) > 2:
+		tree.write(sys.argv[2], xml_declaration=True, encoding=tree.docinfo.encoding or "UTF-8")
 	return 0
 
 sys.exit(main())
